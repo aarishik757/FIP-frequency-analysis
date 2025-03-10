@@ -1,0 +1,44 @@
+from prettytable import PrettyTable
+
+from pymystem3 import Mystem
+m = Mystem() 
+
+PATH = ["corpus2012.txt", "corpus2024.txt"]
+STOPWORDS = "stopwordsru.txt"
+USELESSSYMBOLS = '!"#$%&()*+,-—–.…/:;<=>?@[]^_`{|}~1234567890'
+ALPHABETRU = 'ёйцукенгшщзхъфывапролджэячсмитьбю'
+
+def isrussian(string): #проверка полностью ли слово на русском
+    boolean = 1
+    for char in string:
+        boolean *= char.lower() in ALPHABETRU
+    return boolean
+
+def getTextStats(wholeText): #расчет частотности слова
+    for mark in USELESSSYMBOLS:
+        wholeText = wholeText.replace(mark, " ") #удаление пунктуационных знаков
+    separateWords = [word for word in wholeText.split() if word != "" and word != " "] 
+    textLength = len(separateWords)
+    lemmatizedList = [element for element in m.lemmatize(" ".join(separateWords)) if element != " " and element != "\n"]
+    wordFrequency = {lemma: lemmatizedList.count(lemma) for lemma in lemmatizedList}
+    wordFrequency_sorted = list(sorted(wordFrequency.items(), key=lambda x:x[1], reverse=True))
+    wordFrequency_sorted_clean = [word for word in wordFrequency_sorted if word[0] not in stopwordList and isrussian(word[0]) and word[0].isalpha]
+    #удаление стопслов, слов не на русском, эмодзи
+    return wordFrequency_sorted_clean, textLength
+
+def prettyFrequency(text):
+    CONST = 20
+    results, length = getTextStats(text)
+    prettyResult = [[word[0], word[1]] for word in results] # , str(round(int(word[1])/length*100, 2)) + "%"
+    table = PrettyTable()
+    table.field_names = ["слово", "кол-во в тексте"] # , "относительная частота"
+    table.add_rows(prettyResult)
+    print(table.get_string(start=0, end=CONST))
+    return prettyResult
+
+with open(STOPWORDS, 'r', encoding="utf-8") as fle:
+    stopwordList = fle.read().split('\n')
+for path in PATH:
+    with open(path, 'r', encoding="utf-8") as f:
+        text = f.read()
+        print(prettyFrequency(text))
